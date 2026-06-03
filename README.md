@@ -1,9 +1,10 @@
-# Kiste Specification Archive
+# Kiste Main Specification Archive
 
-This repository contains the versioned product and architecture specifications for the Kiste project. Kiste is a deployment-oriented developer tool that starts with Docker repository inspection and grows into Kubernetes generation, GitOps, library/CLI workflows, self-hosting, modular cloud architecture, static plugins, and expanded diagnostics.
+This repository is the main specification source of truth that all Kiste projects must follow. It contains the versioned product and architecture specifications for the Kiste ecosystem. Kiste is a deployment-oriented developer tool that starts with Docker repository inspection and grows into Kubernetes generation, GitOps, library/CLI workflows, self-hosting, modular cloud architecture, static plugins, and expanded diagnostics.
 
 ## How to use this repository
 
+- Use this repository as the canonical reference before implementing or changing any Kiste project.
 - Start with [Phase 1](Phase%201/spec.md) for the initial repo scanner and token inspector scope.
 - Use the phase table below to find the specification that matches the capability or release version you need.
 - Treat the PDF files as the canonical specs for later phases unless a Markdown source is present beside them.
@@ -38,7 +39,8 @@ This repository contains the versioned product and architecture specifications f
 
 When adding or updating specs:
 
-1. Add new files to the appropriate phase folder.
-2. Use filenames that include the Kiste phase or release version.
-3. Update the specification index in this README.
-4. Prefer Markdown for editable source specs and PDF for published artifacts.
+1. Keep this repository aligned as the source of truth for every Kiste implementation repository.
+2. Add new files to the appropriate phase folder.
+3. Use filenames that include the Kiste phase or release version.
+4. Update the specification index in this README.
+5. Prefer Markdown for editable source specs and PDF for published artifacts.
