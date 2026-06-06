@@ -30,11 +30,15 @@ This repository is the main specification source of truth that all Kiste project
 
 ## Phase progression
 
-1. **Inspect** a Docker-based repository and report deployment readiness.
-2. **Generate and manage** deployment artifacts and supporting configuration.
-3. **Operationalize** Kubernetes, GitOps, secrets, data, and hosting workflows.
-4. **Stabilize and extend** the architecture through release contracts, plugins, and doctor diagnostics.
+1. **Read** GitHub, GitLab, Hugging Face, Docker registries, cloud APIs, Kubernetes APIs, docs, specs
+2. **Inspect** Kiste doctor, security scan, performance scan, cost analysis, compliance check, drift detection
+3. **Plan**  Kubernetes plan, Pulumi plan, Ansible playbook plan, GitOps plan, data/blob plan, rollback plan
+4. **Review** Human approval, partial approval, change request, risk acceptance
+5. **Deploy** Argo CD, Pulumi, Ansible, CI/CD, Kubernetes, cloud APIs
+6. **Monitor** Continuously validate health, tests, scans, compliance, cost, drift, and outcomes.
 
+Back to Inspect when drift/risk/failure appears
+   
 ## Repository maintenance
 
 When adding or updating specs:
