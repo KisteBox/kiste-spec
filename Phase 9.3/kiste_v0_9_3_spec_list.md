@@ -1,6 +1,6 @@
-# Kiste v0.9.3 Spec List
+# Kiste v0.9.3 Version Contract Spec List
 
-Status: draft canonical spec list  
+Status: draft canonical version contract  
 Repository source of truth: `KisteBox/kiste_spec`  
 Target implementation repo: `KisteBox/kiste-py`  
 Release: `0.9.3`
@@ -13,10 +13,6 @@ Kiste v0.9.3 standardizes Kiste around the closed-loop lifecycle:
 Read -> Inspect -> Plan -> Review -> Deploy -> Monitor
 ```
 
-The release also introduces the foundation-aware workspace direction:
+The release also introduces foundation-aware integration:
 
 ```text
-CNCF + PyTorch Foundation integration with opinion
-```
-
-Kiste must select tools
