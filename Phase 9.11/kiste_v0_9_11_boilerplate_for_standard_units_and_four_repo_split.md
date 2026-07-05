@@ -2,7 +2,7 @@
 
 Status: Architecture preparation  
 Release: `0.9.11`  
-Theme: Prepare v0.9.12 standard KisteUnits and v0.9.13 four-repo split while keeping the repositories able to live together during development.
+Theme: Prepare v0.9.12 standard bundled KisteUnits and v0.9.13 four-repo split while keeping the repositories able to live together during development.
 
 ---
 
@@ -71,35 +71,48 @@ Split Kiste into four repositories.
 Preserve the same package boundaries.
 Preserve the same import rules.
 Preserve the same unit contracts.
+Keep the existing core/spec repository as the anchor repo.
 ```
 
 ---
 
-## 3. Four Future Repositories
+## 3. Correct Four Repositories
 
-The future four repositories should be:
+The future four repositories are:
 
 ```text
-1. kiste-core
+1. kiste-cli
 2. kiste-py
 3. kiste-unit-sdk
-4. kiste-standard-units
+4. kiste-core + spec
 ```
 
 Meaning:
 
 ```text
-kiste-core:
-  lifecycle engine, capability graph, hook runtime, policy, plan/review/monitor models
+kiste-cli:
+  CLI command surface, terminal UX, command routing, and user-facing executable package
 
 kiste-py:
-  Python SDK facade and CLI entry surface
+  Python SDK facade, programmatic API, Python package surface, and developer import path
 
 kiste-unit-sdk:
-  builders, Tool Weaver, integration-unit scaffolding, test harnesses
+  builders, Tool Weaver, integration-unit scaffolding, KisteUnit test harnesses, package helpers
 
-kiste-standard-units:
-  standard bundled KisteUnits, similar to a standard library
+kiste-core + spec:
+  existing anchor repository for Core Engine and specs
+  lifecycle engine, capability graph, hook runtime, policy engine, plan/review/monitor models
+  schemas, release specs, capability contracts, and standard bundled KisteUnit definitions
+```
+
+Important correction:
+
+```text
+There is no separate kiste-standard-units repository in the four-way split.
+
+Standard KisteUnits are bundled with kiste-core + spec as the Kiste standard library.
+
+They may later be extracted if needed, but they are not one of the first four repositories.
 ```
 
 Optional later repositories:
@@ -109,6 +122,7 @@ kiste-go-hooks
 kiste-manager
 kiste-cloud
 kiste-examples
+kiste-standard-units, only if the standard library becomes too large later
 ```
 
 But v0.9.13 should first split the stable four.
@@ -124,19 +138,21 @@ Recommended temporary layout:
 ```text
 kiste-workspace/
   repos/
-    kiste-core/
+    kiste-cli/
     kiste-py/
     kiste-unit-sdk/
-    kiste-standard-units/
+    kiste-core-spec/
 ```
 
 Or in a monorepo-compatible layout:
 
 ```text
 repo-root/
-  core/
+  cli/
   py/
   unit-sdk/
+  core/
+  spec/
   standard-units/
 ```
 
@@ -144,6 +160,8 @@ Rule:
 
 ```text
 The code may live together during development, but boundaries must already behave like four separate repositories.
+
+The existing core/spec repo remains the anchor until the v0.9.13 split is complete.
 ```
 
 ---
@@ -157,7 +175,7 @@ Each future repo area should contain:
 ```text
 README.md
 kiste.repo.yaml
-pyproject.toml or equivalent package descriptor
+pyproject.toml, go.mod, or equivalent package descriptor
 OWNERS or CODEOWNERS section
 public API boundary
 import boundary notes
@@ -171,11 +189,12 @@ apiVersion: kiste.dev/v0.9.11
 kind: KisteRepoBoundary
 
 metadata:
-  name: kiste-core
+  name: kiste-core-spec
 
 spec:
-  future_repo: github.com/KisteBox/kiste-core
-  current_path: core/
+  future_repo: github.com/KisteBox/kiste-spec
+  current_path: ./
+  split_role: core-plus-spec-anchor
 
   owns:
     - lifecycle
@@ -185,11 +204,14 @@ spec:
     - plan_model
     - review_model
     - monitor_model
+    - schemas
+    - release_specs
+    - standard_bundled_units
 
   must_not_import:
+    - kiste-cli
     - kiste-py
     - kiste-unit-sdk
-    - kiste-standard-units
 ```
 
 ---
@@ -199,27 +221,33 @@ spec:
 Allowed:
 
 ```text
-kiste-py -> kiste-core
-kiste-unit-sdk -> kiste-core
-kiste-standard-units -> kiste-core
-kiste-standard-units -> kiste-unit-sdk only for tests/scaffolding/build-time helpers
+kiste-cli -> kiste-py
+kiste-cli -> kiste-core + spec only through stable CLI-facing APIs if needed
+kiste-py -> kiste-core + spec
+kiste-unit-sdk -> kiste-core + spec
+standard bundled units -> kiste-core + spec contracts
 ```
 
 Forbidden:
 
 ```text
-kiste-core -> kiste-py
-kiste-core -> kiste-unit-sdk
-kiste-core -> kiste-standard-units
-kiste-py -> kiste-standard-units internals
-kiste-standard-units -> kiste-py internals
+kiste-core + spec -> kiste-cli
+kiste-core + spec -> kiste-py
+kiste-core + spec -> kiste-unit-sdk
+kiste-cli -> kiste-unit-sdk internals
+kiste-py -> kiste-unit-sdk internals
+standard bundled units -> kiste-cli internals
+standard bundled units -> kiste-py internals
 ```
 
 Rule:
 
 ```text
 Core has no upward dependencies.
-Standard units depend on Core contracts, not Core internals.
+CLI is thin.
+Python SDK is the public programmatic facade.
+Unit SDK is for building units, not for running Core.
+Standard bundled units depend on Core contracts, not Core internals.
 ```
 
 ---
@@ -298,12 +326,12 @@ const (
 )
 
 type HookSpec struct {
-    Name         string
-    Tool         ToolSpec
-    Provides     []string
-    Requires     []string
-    Stages       []LifecycleStage
-    Mutation     MutationPolicy
+    Name     string
+    Tool     ToolSpec
+    Provides []string
+    Requires []string
+    Stages   []LifecycleStage
+    Mutation MutationPolicy
 }
 
 type HookContext struct {
@@ -388,7 +416,7 @@ standard-unit-iam-readonly
 Rule:
 
 ```text
-Standard KisteUnits are bundled, trusted defaults.
+Standard KisteUnits are bundled, trusted defaults inside kiste-core + spec.
 They must remain replaceable by external KisteUnits.
 ```
 
@@ -403,7 +431,7 @@ They provide common behavior without forcing users to install everything.
 Characteristics:
 
 ```text
-bundled with Kiste
+bundled with Kiste Core
 versioned with Kiste
 safe defaults
 capability-first
@@ -455,6 +483,7 @@ spec:
 
   policy:
     bundled: true
+    bundled_in: kiste-core-spec
     replaceable: true
     mutation_default: false
     approved_plan_required: true
@@ -471,7 +500,7 @@ Resolution order should be policy-driven:
 
 ```text
 1. Core built-in capability
-2. Standard KisteUnit
+2. Standard bundled KisteUnit from kiste-core + spec
 3. Workspace-pinned KisteUnit
 4. External KisteUnit
 5. Tool-specific integration unit
@@ -512,18 +541,21 @@ v0.9.11 should define these future outputs:
 v0.9.11 is accepted only if:
 
 ```text
-1. Four future repositories are named.
-2. Repo boundary markers are defined.
-3. Import rules for the future split are defined.
-4. Monorepo development remains possible.
-5. Multi-repo split is mechanically prepared.
-6. Strong Go hook interface is defined.
-7. Go-native tool adapters are named.
-8. Standard KisteUnit catalog is prepared.
-9. v0.9.12 standard-unit scope is defined.
-10. v0.9.13 four-repo split scope is defined.
-11. Standard units are replaceable by external units.
-12. Core does not import standard-unit internals.
+1. The correct four future repositories are named.
+2. The four repositories are kiste-cli, kiste-py, kiste-unit-sdk, and kiste-core + spec.
+3. kiste-core + spec is recognized as the existing anchor repo.
+4. There is no separate kiste-standard-units repo in the initial four-way split.
+5. Repo boundary markers are defined.
+6. Import rules for the future split are defined.
+7. Monorepo development remains possible.
+8. Multi-repo split is mechanically prepared.
+9. Strong Go hook interface is defined.
+10. Go-native tool adapters are named.
+11. Standard KisteUnit catalog is prepared.
+12. v0.9.12 standard-unit scope is defined.
+13. v0.9.13 four-repo split scope is defined.
+14. Standard units are replaceable by external units.
+15. Core does not import CLI, Python SDK, or Unit SDK internals.
 ```
 
 ---
@@ -533,9 +565,14 @@ v0.9.11 is accepted only if:
 ```text
 v0.9.11 prepares the boilerplate.
 
-v0.9.12 builds the standard KisteUnit library.
+v0.9.12 builds the standard KisteUnit library bundled with kiste-core + spec.
 
-v0.9.13 splits the repositories four ways.
+v0.9.13 splits the repositories four ways:
+
+  1. kiste-cli
+  2. kiste-py
+  3. kiste-unit-sdk
+  4. kiste-core + spec
 
 The four repos may live together during development, but the boundaries must already behave like separate repositories.
 
