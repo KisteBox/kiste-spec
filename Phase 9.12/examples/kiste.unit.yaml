@@ -24,9 +24,35 @@ spec:
       - name: git.state_read
         implementation: github-api
         support: verified
+        traits:
+          cloudAffinity:
+            - cloud-neutral
+          identityBoundaries:
+            - external-saas
+          runtimes:
+            - any
+          externalDependencies:
+            - github-api
+          externalCloudDependency: false
+          managed: true
+          portability: high
+          operationalOverhead: low
       - name: git.update
         implementation: github-api
         support: compatible
+        traits:
+          cloudAffinity:
+            - cloud-neutral
+          identityBoundaries:
+            - external-saas
+          runtimes:
+            - any
+          externalDependencies:
+            - github-api
+          externalCloudDependency: false
+          managed: true
+          portability: high
+          operationalOverhead: low
     requires:
       - policy.validate
       - secret.ref
