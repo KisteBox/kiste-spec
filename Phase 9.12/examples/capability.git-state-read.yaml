@@ -1,0 +1,30 @@
+apiVersion: kiste.dev/v1alpha1
+kind: Capability
+
+metadata:
+  name: git.state_read
+
+spec:
+  family: git
+  summary: Read repository state without mutation.
+  stability: stable
+
+  lifecycle:
+    stages:
+      - read
+      - inspect
+    mutation: none
+    approval: never
+
+  dependencies:
+    requires:
+      - workspace.read
+    optional: []
+
+  contract:
+    inputs:
+      - kiste.workspace-context/v1alpha1
+    outputs:
+      - kiste.git-facts/v1alpha1
+    evidence:
+      - source-revision
