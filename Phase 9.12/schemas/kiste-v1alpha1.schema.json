@@ -1,0 +1,691 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec.kiste.dev/schemas/kiste-v1alpha1.schema.json",
+  "title": "Kiste v1alpha1 manifest",
+  "description": "Canonical schema for Kiste Workspace, KisteUnit, Capability, and generated KisteLock objects.",
+  "oneOf": [
+    { "$ref": "#/$defs/workspace" },
+    { "$ref": "#/$defs/kisteUnit" },
+    { "$ref": "#/$defs/capability" },
+    { "$ref": "#/$defs/kisteLock" }
+  ],
+  "$defs": {
+    "apiVersion": {
+      "const": "kiste.dev/v1alpha1"
+    },
+    "dnsName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 63,
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+    },
+    "capabilityName": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 253,
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+    },
+    "familyName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 63,
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "adapterType": {
+      "enum": ["native-go", "local-grpc", "remote-grpc", "wasm"]
+    },
+    "lifecycleStage": {
+      "enum": ["read", "inspect", "plan", "review", "deploy", "monitor"]
+    },
+    "mutationLevel": {
+      "enum": ["none", "workspace", "runtime", "external-system"]
+    },
+    "supportLevel": {
+      "enum": ["experimental", "compatible", "verified", "supported", "deprecated"]
+    },
+    "labels": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9](?:[a-z0-9./_-]*[a-z0-9])?$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 253
+      }
+    },
+    "annotations": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9./_-]*[A-Za-z0-9])?$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 4096
+      }
+    },
+    "dnsMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/dnsName" },
+        "labels": { "$ref": "#/$defs/labels" },
+        "annotations": { "$ref": "#/$defs/annotations" }
+      }
+    },
+    "capabilityMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/capabilityName" },
+        "labels": { "$ref": "#/$defs/labels" },
+        "annotations": { "$ref": "#/$defs/annotations" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "$ref": "#/$defs/dnsName" },
+        "type": {
+          "enum": ["git", "directory", "object-store", "oci", "http"]
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "subpath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "authRef": { "$ref": "#/$defs/dnsName" },
+        "readOnly": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "directory" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["path"],
+            "not": { "required": ["uri"] }
+          },
+          "else": {
+            "required": ["uri"],
+            "not": { "required": ["path"] }
+          }
+        }
+      ]
+    },
+    "unitReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module", "version"],
+      "properties": {
+        "module": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 512
+        },
+        "version": { "$ref": "#/$defs/semanticVersion" },
+        "digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "unit"],
+      "properties": {
+        "capability": { "$ref": "#/$defs/capabilityName" },
+        "unit": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 512
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        }
+      }
+    },
+    "preferenceContext": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][A-Za-z0-9]*$"
+      },
+      "additionalProperties": {
+        "type": ["string", "number", "integer", "boolean"]
+      }
+    },
+    "preference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "prefer", "reason"],
+      "properties": {
+        "capability": { "$ref": "#/$defs/capabilityName" },
+        "when": { "$ref": "#/$defs/preferenceContext" },
+        "prefer": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "unit": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 512
+            },
+            "tool": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "implementation": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 512
+        }
+      }
+    },
+    "workspaceCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requires"],
+      "properties": {
+        "requires": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capabilityName" }
+        },
+        "optional": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capabilityName" }
+        }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "onAmbiguity", "allowFallback"],
+      "properties": {
+        "mode": { "enum": ["locked", "update"] },
+        "onAmbiguity": { "const": "fail" },
+        "allowFallback": { "type": "boolean" },
+        "bindings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/binding" }
+        },
+        "preferences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/preference" }
+        }
+      }
+    },
+    "workspacePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowedSourceHosts", "allowedAdapters", "mutation", "secrets"],
+      "properties": {
+        "allowedSourceHosts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9.-]+$"
+          }
+        },
+        "allowedAdapters": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/adapterType" }
+        },
+        "mutation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requireApprovedPlan", "readOnlyStages"],
+          "properties": {
+            "requireApprovedPlan": { "const": true },
+            "readOnlyStages": {
+              "type": "array",
+              "minItems": 4,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/lifecycleStage" },
+              "allOf": [
+                { "contains": { "const": "read" } },
+                { "contains": { "const": "inspect" } },
+                { "contains": { "const": "plan" } },
+                { "contains": { "const": "review" } }
+              ]
+            }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["valuesInManifest"],
+          "properties": {
+            "valuesInManifest": { "const": "forbidden" }
+          }
+        }
+      }
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind", "metadata", "spec"],
+      "properties": {
+        "apiVersion": { "$ref": "#/$defs/apiVersion" },
+        "kind": { "const": "Workspace" },
+        "metadata": { "$ref": "#/$defs/dnsMetadata" },
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sources", "capabilities", "resolution", "policy"],
+          "properties": {
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/source" }
+            },
+            "capabilities": { "$ref": "#/$defs/workspaceCapabilities" },
+            "units": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/unitReference" }
+            },
+            "resolution": { "$ref": "#/$defs/resolution" },
+            "policy": { "$ref": "#/$defs/workspacePolicy" }
+          }
+        }
+      }
+    },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "contract"],
+      "properties": {
+        "type": { "$ref": "#/$defs/adapterType" },
+        "contract": {
+          "const": "kiste.hook/v1alpha1"
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "endpoint": {
+          "type": "string",
+          "pattern": "^grpcs://",
+          "maxLength": 2048
+        },
+        "module": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "digest": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": { "enum": ["native-go", "local-grpc"] }
+            },
+            "required": ["type"]
+          },
+          "then": { "required": ["entrypoint"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "remote-grpc" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["endpoint"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "wasm" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["module", "digest"] }
+        }
+      ]
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "interface"],
+      "properties": {
+        "name": { "$ref": "#/$defs/dnsName" },
+        "interface": {
+          "enum": ["api", "sdk", "cli", "file-format", "local-service", "remote-service"]
+        }
+      }
+    },
+    "providedCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "implementation", "support"],
+      "properties": {
+        "name": { "$ref": "#/$defs/capabilityName" },
+        "implementation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "support": { "$ref": "#/$defs/supportLevel" }
+      }
+    },
+    "unitCapabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provides"],
+      "properties": {
+        "provides": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/providedCapability" }
+        },
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capabilityName" }
+        }
+      }
+    },
+    "unitPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mutation", "requireApprovedPlan", "secretAccess"],
+      "properties": {
+        "mutation": { "$ref": "#/$defs/mutationLevel" },
+        "requireApprovedPlan": { "type": "boolean" },
+        "secretAccess": {
+          "enum": ["none", "references-only"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mutation": { "enum": ["workspace", "runtime", "external-system"] }
+            },
+            "required": ["mutation"]
+          },
+          "then": {
+            "properties": {
+              "requireApprovedPlan": { "const": true }
+            }
+          }
+        }
+      ]
+    },
+    "kisteUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind", "metadata", "spec"],
+      "properties": {
+        "apiVersion": { "$ref": "#/$defs/apiVersion" },
+        "kind": { "const": "KisteUnit" },
+        "metadata": { "$ref": "#/$defs/dnsMetadata" },
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["module", "version", "adapter", "tools", "capabilities", "lifecycle", "policy"],
+          "properties": {
+            "module": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 512
+            },
+            "version": { "$ref": "#/$defs/semanticVersion" },
+            "adapter": { "$ref": "#/$defs/adapter" },
+            "tools": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/tool" }
+            },
+            "capabilities": { "$ref": "#/$defs/unitCapabilities" },
+            "lifecycle": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["stages"],
+              "properties": {
+                "stages": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "$ref": "#/$defs/lifecycleStage" }
+                }
+              }
+            },
+            "policy": { "$ref": "#/$defs/unitPolicy" }
+          }
+        }
+      }
+    },
+    "capabilityLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stages", "mutation", "approval"],
+      "properties": {
+        "stages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/lifecycleStage" }
+        },
+        "mutation": { "$ref": "#/$defs/mutationLevel" },
+        "approval": {
+          "enum": ["never", "on-mutation", "always"]
+        }
+      }
+    },
+    "capabilityDependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requires", "optional"],
+      "properties": {
+        "requires": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capabilityName" }
+        },
+        "optional": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capabilityName" }
+        }
+      }
+    },
+    "capabilityContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "outputs", "evidence"],
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 253
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 253
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+          }
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind", "metadata", "spec"],
+      "properties": {
+        "apiVersion": { "$ref": "#/$defs/apiVersion" },
+        "kind": { "const": "Capability" },
+        "metadata": { "$ref": "#/$defs/capabilityMetadata" },
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["family", "summary", "stability", "lifecycle", "dependencies", "contract"],
+          "properties": {
+            "family": { "$ref": "#/$defs/familyName" },
+            "summary": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 512
+            },
+            "stability": {
+              "enum": ["experimental", "preview", "stable", "deprecated"]
+            },
+            "lifecycle": { "$ref": "#/$defs/capabilityLifecycle" },
+            "dependencies": { "$ref": "#/$defs/capabilityDependencies" },
+            "contract": { "$ref": "#/$defs/capabilityContract" }
+          }
+        }
+      }
+    },
+    "lockedUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module", "version", "commit", "digest"],
+      "properties": {
+        "module": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 512
+        },
+        "version": { "$ref": "#/$defs/semanticVersion" },
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{7,64}$"
+        },
+        "digest": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "lockedCapability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "unit", "implementation", "adapter", "support"],
+      "properties": {
+        "name": { "$ref": "#/$defs/capabilityName" },
+        "unit": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 512
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "adapter": { "$ref": "#/$defs/adapterType" },
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "support": { "$ref": "#/$defs/supportLevel" }
+      }
+    },
+    "kisteLock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiVersion", "kind", "metadata", "spec"],
+      "properties": {
+        "apiVersion": { "$ref": "#/$defs/apiVersion" },
+        "kind": { "const": "KisteLock" },
+        "metadata": { "$ref": "#/$defs/dnsMetadata" },
+        "spec": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["workspaceDigest", "units", "capabilities", "generatedBy"],
+          "properties": {
+            "workspaceDigest": { "$ref": "#/$defs/sha256" },
+            "units": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/lockedUnit" }
+            },
+            "capabilities": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/lockedCapability" }
+            },
+            "generatedBy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kisteVersion", "schemaVersion"],
+              "properties": {
+                "kisteVersion": { "$ref": "#/$defs/semanticVersion" },
+                "schemaVersion": { "const": "kiste.dev/v1alpha1" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
