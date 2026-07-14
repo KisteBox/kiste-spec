@@ -51,6 +51,173 @@
     "supportLevel": {
       "enum": ["experimental", "compatible", "verified", "supported", "deprecated"]
     },
+    "traitToken": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$"
+    },
+    "intentPreference": {
+      "enum": [
+        "same-cloud",
+        "same-identity-boundary",
+        "same-runtime",
+        "managed-service",
+        "verified",
+        "supported",
+        "cloud-neutral",
+        "portable",
+        "fewest-permissions",
+        "fewest-units",
+        "lowest-operational-overhead",
+        "local-before-remote"
+      ]
+    },
+    "compatibilityTraits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cloudAffinity": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "identityBoundaries": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "runtimes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "regions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "externalDependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "externalCloudDependency": { "type": "boolean" },
+        "managed": { "type": "boolean" },
+        "portability": { "enum": ["low", "medium", "high"] },
+        "operationalOverhead": { "enum": ["low", "medium", "high"] }
+      }
+    },
+    "dealBreakerScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/capabilityName" }
+        },
+        "families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/familyName" }
+        }
+      }
+    },
+    "dealBreakerConstraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "cloudAffinity": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "identityBoundaries": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "runtimes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "regions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        },
+        "externalCloudDependency": { "type": "boolean" },
+        "forbiddenExternalDependencies": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        }
+      }
+    },
+    "dealBreaker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "appliesTo", "must"],
+      "properties": {
+        "name": { "$ref": "#/$defs/dnsName" },
+        "appliesTo": { "$ref": "#/$defs/dealBreakerScope" },
+        "must": { "$ref": "#/$defs/dealBreakerConstraints" }
+      }
+    },
+    "intentContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "cloud": { "$ref": "#/$defs/traitToken" },
+        "runtime": { "$ref": "#/$defs/traitToken" },
+        "identityBoundary": { "$ref": "#/$defs/traitToken" },
+        "region": { "$ref": "#/$defs/traitToken" },
+        "environment": { "$ref": "#/$defs/traitToken" }
+      }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "context"],
+      "properties": {
+        "outcome": { "$ref": "#/$defs/capabilityName" },
+        "subject": { "$ref": "#/$defs/dnsName" },
+        "context": { "$ref": "#/$defs/intentContext" },
+        "dealBreakers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/dealBreaker" }
+        },
+        "preferences": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["order"],
+          "properties": {
+            "order": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/intentPreference" }
+            }
+          }
+        }
+      }
+    },
     "labels": {
       "type": "object",
       "propertyNames": {
@@ -326,6 +493,7 @@
           "additionalProperties": false,
           "required": ["sources", "capabilities", "resolution", "policy"],
           "properties": {
+            "intent": { "$ref": "#/$defs/intent" },
             "sources": {
               "type": "array",
               "minItems": 1,
@@ -417,7 +585,8 @@
           "maxLength": 128,
           "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
         },
-        "support": { "$ref": "#/$defs/supportLevel" }
+        "support": { "$ref": "#/$defs/supportLevel" },
+        "traits": { "$ref": "#/$defs/compatibilityTraits" }
       }
     },
     "unitCapabilities": {
@@ -648,7 +817,13 @@
           "minLength": 1,
           "maxLength": 128
         },
-        "support": { "$ref": "#/$defs/supportLevel" }
+        "support": { "$ref": "#/$defs/supportLevel" },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/traitToken" }
+        }
       }
     },
     "kisteLock": {
@@ -665,6 +840,7 @@
           "required": ["workspaceDigest", "units", "capabilities", "generatedBy"],
           "properties": {
             "workspaceDigest": { "$ref": "#/$defs/sha256" },
+            "intentDigest": { "$ref": "#/$defs/sha256" },
             "units": {
               "type": "array",
               "items": { "$ref": "#/$defs/lockedUnit" }
