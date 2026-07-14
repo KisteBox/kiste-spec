@@ -30,7 +30,7 @@ This repository is the main specification source of truth that all Kiste project
 | Phase 9.2 / v0.9.2 | Expanded doctor diagnostics. | [`kiste_v0_9_2_expanded_doctor_spec.pdf`](Phase%209.2/kiste_v0_9_2_expanded_doctor_spec.pdf) |
 | Phase 9.10 / v0.9.10 | Capability-first tool/unit/workspace model and global capability dependency graph. | [`tool capability model`](Phase%209.10/kiste_v0_9_10_tool_capability_kisteunit_workspace_model.md), [`global dependency graph`](Phase%209.10/kiste_v0_9_10_global_capability_dependency_graph.md) |
 | Phase 9.11 / v0.9.11 | Capability preference/fit and standard-unit/Go-hook boilerplate. | [`preference and fit model`](Phase%209.11/kiste_v0_9_11_capability_preference_fit_model.md), [`standard unit boilerplate`](Phase%209.11/kiste_v0_9_11_boilerplate_for_standard_units_and_four_repo_split.md) |
-| Phase 9.12 / v0.9.12 | Canonical Kiste YAML, capability contracts, deterministic resolution, lock format, schema, and examples. | [`YAML and capability standard`](Phase%209.12/kiste_v0_9_12_yaml_capability_standard.md), [`JSON Schema`](Phase%209.12/schemas/kiste-v1alpha1.schema.json), [`examples`](Phase%209.12/examples/) |
+| Phase 9.12 / v0.9.12 | Canonical Kiste YAML, intent-aware capability matchmaking, deterministic resolution, lock format, schema, and examples. | [`YAML and capability standard`](Phase%209.12/kiste_v0_9_12_yaml_capability_standard.md), [`JSON Schema`](Phase%209.12/schemas/kiste-v1alpha1.schema.json), [`examples`](Phase%209.12/examples/) |
 
 ## Phase progression
 
