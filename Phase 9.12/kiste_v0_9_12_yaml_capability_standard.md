@@ -130,6 +130,40 @@ metadata:
   name: ai-product-platform
 
 spec:
+  intent:
+    outcome: secure.application_keys
+    subject: application
+
+    context:
+      cloud: azure
+      runtime: aks
+      identityBoundary: azure-tenant
+      region: southeast-asia
+      environment: production
+
+    dealBreakers:
+      - name: azure-key-boundary
+        appliesTo:
+          capabilities:
+            - security.key_encryption
+        must:
+          cloudAffinity:
+            - azure
+            - cloud-neutral
+          identityBoundaries:
+            - azure-tenant
+            - workload-identity
+          externalCloudDependency: false
+
+    preferences:
+      order:
+        - same-cloud
+        - same-identity-boundary
+        - managed-service
+        - verified
+        - fewest-permissions
+        - fewest-units
+
   sources:
     - name: application
       type: git
@@ -150,6 +184,7 @@ spec:
       - git.state_read
       - container.oci_metadata
       - runtime.manifest_validation
+      - security.key_encryption
     optional:
       - monitor.runtime_health
 
@@ -160,6 +195,8 @@ spec:
       version: 0.9.12
     - module: github.com/KisteBox/kiste-unit-kubernetes
       version: v0.2.0
+    - module: github.com/KisteBox/kiste-unit-azure-key-vault
+      version: v0.1.0
 
   resolution:
     mode: locked
@@ -354,6 +391,19 @@ spec:
       - name: git.state_read
         implementation: github-api
         support: verified
+        traits:
+          cloudAffinity:
+            - cloud-neutral
+          identityBoundaries:
+            - external-saas
+          runtimes:
+            - any
+          externalDependencies:
+            - github-api
+          externalCloudDependency: false
+          managed: true
+          portability: high
+          operationalOverhead: low
       - name: git.update
         implementation: github-api
         support: compatible
@@ -418,31 +468,47 @@ This is the minimum-capability principle.
 
 ## 12. Deterministic Resolution
 
+The canonical YAML remains capability-oriented:
+
+```text
+Workspace spec.capabilities.requires = Need records
+KisteUnit spec.capabilities.provides  = Offer records
+KisteLock spec.capabilities           = Match records
+```
+
+`Need`, `Offer`, and `Match` are normalized resolver records, not additional manifest kinds. This keeps existing `kiste.yaml` and `kiste.unit.yaml` shapes compatible while allowing a much smaller matching engine.
+
 Resolution order:
 
 ```text
 1. Validate the Workspace and referenced manifests.
-2. Expand required capability dependencies.
-3. Discover candidates from Core, bundled units, pinned units, and allowed registries.
-4. Reject candidates that fail contract, platform, tool, adapter, trust, or policy checks.
-5. Apply explicit workspace bindings.
-6. Apply the selected preference strategy only if automatic selection is allowed.
-7. Fail on an unresolved requirement or ambiguous best candidate.
-8. Write the exact result to kiste.lock.yaml.
-9. Build plans only from the locked ResolvedCapabilityGraph.
+2. Read optional user intent, environment context, deal breakers, and preferences.
+3. Expand required capability dependencies into Need records.
+4. Normalize unit capability declarations into Offer records with compatibility traits.
+5. Reject offers that fail capability, version, platform, tool, adapter, trust, or organization policy.
+6. Reject offers that fail any applicable user deal breaker.
+7. Apply explicit workspace bindings; an invalid binding fails rather than bypassing a gate.
+8. Rank eligible offers using capability-specific preferences and then intent preferences.
+9. Select the smallest complete unit set with the fewest permissions.
+10. Fail on an unresolved need or ambiguous best candidate.
+11. Write the exact matches and reasons to kiste.lock.yaml.
+12. Build plans only from the locked matches.
 ```
 
 Hard priority:
 
 ```text
-policy and trust
-required contract compatibility
+technical and contract compatibility
+organization policy and trust
+applicable user deal breakers
 explicit binding
-verified workspace preference
-deterministic tie handling
+capability-specific preference
+intent-level preference
+fewest units and permissions
+fail on a remaining tie
 ```
 
-Policy can block a preferred implementation. Preference can never bypass policy. A tie is an ambiguity, not permission to make a hidden vendor choice.
+Policy or a deal breaker can block a preferred implementation. No numeric score may compensate for a failed hard gate. A tie is an ambiguity, not permission to make a hidden vendor choice.
 
 ### Resolution modes
 
@@ -457,9 +523,111 @@ update  Kiste may update candidates and produces a lock-file diff for review
 
 ---
 
-## 13. Preferences
+## 13. User Intent, Deal Breakers, and Preferences
 
-Preferences are optional workspace rules. They rank already-allowed candidates; they do not create eligibility.
+User intent is optional. A capability-only Workspace remains valid and resolves exactly as before.
+
+Intent contributes three matching inputs:
+
+```text
+context        facts about the target environment
+dealBreakers   scoped hard constraints that eliminate offers
+preferences    ordered soft criteria for eligible offers
+```
+
+Deal breakers must be scoped to capability names or families. A rule for key management must not accidentally reject an unrelated Git or monitoring unit.
+
+```yaml
+intent:
+  outcome: secure.application_keys
+  subject: application
+
+  context:
+    cloud: azure
+    runtime: aks
+    identityBoundary: azure-tenant
+    region: southeast-asia
+    environment: production
+
+  dealBreakers:
+    - name: azure-key-boundary
+      appliesTo:
+        capabilities:
+          - security.key_encryption
+      must:
+        cloudAffinity:
+          - azure
+          - cloud-neutral
+        identityBoundaries:
+          - azure-tenant
+          - workload-identity
+        externalCloudDependency: false
+
+  preferences:
+    order:
+      - same-cloud
+      - same-identity-boundary
+      - managed-service
+      - verified
+      - fewest-permissions
+      - fewest-units
+```
+
+KisteUnits advertise matching facts on each capability offer:
+
+```yaml
+capabilities:
+  provides:
+    - name: security.key_encryption
+      implementation: azure-key-vault
+      support: verified
+      traits:
+        cloudAffinity:
+          - azure
+        identityBoundaries:
+          - azure-tenant
+          - workload-identity
+        runtimes:
+          - aks
+        externalDependencies:
+          - azure-key-vault-api
+        externalCloudDependency: false
+        managed: true
+        portability: low
+        operationalOverhead: low
+```
+
+### AWS KMS and Azure example
+
+An AWS KMS offer may correctly provide `security.key_encryption`, but advertise:
+
+```yaml
+traits:
+  cloudAffinity:
+    - aws
+  identityBoundaries:
+    - aws-account
+  externalDependencies:
+    - aws-kms-api
+  externalCloudDependency: true
+```
+
+For the Azure intent above, the matcher rejects it:
+
+```yaml
+candidate: aws-kms
+status: rejected
+reasons:
+  - cloud-affinity-not-allowed
+  - identity-boundary-mismatch
+  - external-cloud-dependency-forbidden
+```
+
+This is not a universal rule that AWS KMS can never be called from Azure. If another workspace explicitly allows cross-cloud dependencies, the offer may remain eligible. Compatibility is derived from user intent and policy, not hardcoded vendor prejudice.
+
+### Capability-specific preferences
+
+Existing `resolution.preferences` remain valid. They rank eligible candidates for a specific capability after all hard gates pass.
 
 ```yaml
 resolution:
@@ -476,7 +644,7 @@ resolution:
       reason: native-ml-pipeline-support
 ```
 
-Preferences must be local, explainable, and reviewable. Unit authors cannot assign themselves a workspace fit score.
+Preferences must be local, ordered, explainable, and reviewable. Unit authors advertise facts; they cannot assign themselves a workspace fit score. If an offer omits a trait required by an applicable deal breaker, the matcher rejects it as `required-trait-unknown`.
 
 ---
 
@@ -491,12 +659,17 @@ metadata:
 
 spec:
   workspaceDigest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+  intentDigest: sha256:3333333333333333333333333333333333333333333333333333333333333333
 
   units:
     - module: github.com/KisteBox/kiste-unit-kubernetes
       version: v0.2.0
       commit: 8f3ab21
       digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
+    - module: github.com/KisteBox/kiste-unit-azure-key-vault
+      version: v0.1.0
+      commit: 9a4bc32
+      digest: sha256:4444444444444444444444444444444444444444444444444444444444444444
 
   capabilities:
     - name: runtime.manifest_validation
@@ -504,13 +677,29 @@ spec:
       implementation: kubernetes-api
       adapter: native-go
       support: verified
+      reasons:
+        - capability-compatible
+        - policy-allowed
+
+    - name: security.key_encryption
+      unit: github.com/KisteBox/kiste-unit-azure-key-vault
+      implementation: azure-key-vault
+      adapter: local-grpc
+      tool: azure-key-vault
+      support: verified
+      reasons:
+        - capability-compatible
+        - deal-breakers-passed
+        - same-cloud
+        - same-identity-boundary
+        - managed-service
 
   generatedBy:
     kisteVersion: 0.9.12
     schemaVersion: kiste.dev/v1alpha1
 ```
 
-The lock is generated and deterministic. A change to units, versions, digests, bindings, or capability selections must appear as a reviewable lock diff.
+The lock is generated and deterministic. A change to intent, deal breakers, units, versions, digests, bindings, capability selections, or match reasons must appear as a reviewable lock diff. Rejected candidates belong in `.kiste/capabilities/implementation-selection-report.json`; the lock stores only selected matches and concise reasons.
 
 ---
 
@@ -559,6 +748,12 @@ JSON Schema validates structure. Kiste must additionally enforce:
 10. No manifest or lock contains a secret value.
 11. Required units are version-pinned; production locks also require immutable digests.
 12. Resolution activates only the minimum required capability closure.
+13. A Workspace without `spec.intent` remains valid and uses capability-only resolution.
+14. Every deal breaker is scoped to one or more capability names or families.
+15. An offer missing a trait required by an applicable deal breaker is rejected as unknown, not treated as compatible.
+16. A failed deal breaker cannot be offset by preference weight or optimizer score.
+17. Unit-advertised traits are facts subject to validation; units cannot assign themselves preference scores.
+18. The lock records concise reasons for every selected match.
 
 ---
 
@@ -625,17 +820,23 @@ This standard is accepted only if:
 13. Only the minimum required capability closure is active.
 14. Unknown fields fail machine validation.
 15. The published examples pass the published JSON Schema.
+16. Existing capability-only Workspace manifests remain valid when `spec.intent` is absent.
+17. Workspace intent supports context, scoped deal breakers, and ordered preferences.
+18. KisteUnit capability offers may advertise typed compatibility traits.
+19. Technical compatibility, organization policy, and user deal breakers filter candidates before preferences.
+20. AWS KMS is rejected for an Azure-only key boundary but may remain eligible when cross-cloud dependencies are explicitly allowed.
+21. The resolver uses derived Need, Offer, and Match records without introducing additional manifest kinds or mandatory graphs.
 
 ---
 
 ## 21. Final Rule
 
 ```text
-Kiste YAML declares intent, not discovered state.
+Kiste YAML declares user intent, requirements, and policy, not discovered state.
 Capability defines behavior, not implementation.
-KisteUnit declares implementation, not preference.
-Workspace defines policy, binding, and preference.
-KisteLock freezes the selected graph.
+KisteUnit declares implementations and compatibility facts, not preference scores.
+Workspace defines context, deal breakers, policy, bindings, and preferences.
+KisteLock freezes selected matches and their reasons.
 
-Kiste may know many capabilities, but it activates only the smallest locked set required by the workspace.
+Kiste first filters incompatible offers, then ranks eligible offers, and finally activates only the smallest locked set required by the workspace.
 ```
