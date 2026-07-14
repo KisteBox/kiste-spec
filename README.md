@@ -9,6 +9,7 @@ This repository is the main specification source of truth that all Kiste project
 - Use the phase table below to find the specification that matches the capability or release version you need.
 - Treat the PDF files as the canonical specs for later phases unless a Markdown source is present beside them.
 - Keep future specifications in phase-numbered folders using descriptive filenames.
+- Use the Phase 9.12 schema and examples as the canonical format for new Kiste manifests.
 
 ## Specification index
 
@@ -27,18 +28,21 @@ This repository is the main specification source of truth that all Kiste project
 | Phase 9 / v0.9.0 | Static plugins and split-ready architecture. | [`kiste_phase9_v0_9_0_static_plugins_split_ready_architecture_spec.pdf`](Phase%209/kiste_phase9_v0_9_0_static_plugins_split_ready_architecture_spec.pdf) |
 | Phase 9.1 / v0.9.1 | Standard config and contract updates. | [`kiste_v0_9_1_standard_config_contract_spec.pdf`](Phase%209.1/kiste_v0_9_1_standard_config_contract_spec.pdf), [`kiste_v0_9_1_standard_contract_updated_spec.pdf`](Phase%209.1/kiste_v0_9_1_standard_contract_updated_spec.pdf) |
 | Phase 9.2 / v0.9.2 | Expanded doctor diagnostics. | [`kiste_v0_9_2_expanded_doctor_spec.pdf`](Phase%209.2/kiste_v0_9_2_expanded_doctor_spec.pdf) |
+| Phase 9.10 / v0.9.10 | Capability-first tool/unit/workspace model and global capability dependency graph. | [`tool capability model`](Phase%209.10/kiste_v0_9_10_tool_capability_kisteunit_workspace_model.md), [`global dependency graph`](Phase%209.10/kiste_v0_9_10_global_capability_dependency_graph.md) |
+| Phase 9.11 / v0.9.11 | Capability preference/fit and standard-unit/Go-hook boilerplate. | [`preference and fit model`](Phase%209.11/kiste_v0_9_11_capability_preference_fit_model.md), [`standard unit boilerplate`](Phase%209.11/kiste_v0_9_11_boilerplate_for_standard_units_and_four_repo_split.md) |
+| Phase 9.12 / v0.9.12 | Canonical Kiste YAML, capability contracts, deterministic resolution, lock format, schema, and examples. | [`YAML and capability standard`](Phase%209.12/kiste_v0_9_12_yaml_capability_standard.md), [`JSON Schema`](Phase%209.12/schemas/kiste-v1alpha1.schema.json), [`examples`](Phase%209.12/examples/) |
 
 ## Phase progression
 
 1. **Read** GitHub, GitLab, Hugging Face, Docker registries, cloud APIs, Kubernetes APIs, docs, specs
 2. **Inspect** Kiste doctor, security scan, performance scan, cost analysis, compliance check, drift detection
-3. **Plan**  Kubernetes plan, Pulumi plan, Ansible playbook plan, GitOps plan, data/blob plan, rollback plan
+3. **Plan** Kubernetes plan, Pulumi plan, Ansible playbook plan, GitOps plan, data/blob plan, rollback plan
 4. **Review** Human approval, partial approval, change request, risk acceptance
 5. **Deploy** Argo CD, Pulumi, Ansible, CI/CD, Kubernetes, cloud APIs
 6. **Monitor** Continuously validate health, tests, scans, compliance, cost, drift, and outcomes.
 
 Back to Inspect when drift/risk/failure appears
-   
+
 ## Repository maintenance
 
 When adding or updating specs:
@@ -48,3 +52,4 @@ When adding or updating specs:
 3. Use filenames that include the Kiste phase or release version.
 4. Update the specification index in this README.
 5. Prefer Markdown for editable source specs and PDF for published artifacts.
+6. Validate new canonical manifests against the current machine-readable schema.
