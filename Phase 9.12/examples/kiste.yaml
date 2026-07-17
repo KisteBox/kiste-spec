@@ -1,0 +1,106 @@
+apiVersion: kiste.dev/v1alpha1
+kind: Workspace
+
+metadata:
+  name: ai-product-platform
+  labels:
+    team: platform
+
+spec:
+  intent:
+    outcome: secure.application_keys
+    subject: application
+
+    context:
+      cloud: azure
+      runtime: aks
+      identityBoundary: azure-tenant
+      region: southeast-asia
+      environment: production
+
+    dealBreakers:
+      - name: azure-key-boundary
+        appliesTo:
+          capabilities:
+            - security.key_encryption
+        must:
+          cloudAffinity:
+            - azure
+            - cloud-neutral
+          identityBoundaries:
+            - azure-tenant
+            - workload-identity
+          externalCloudDependency: false
+
+    preferences:
+      order:
+        - same-cloud
+        - same-identity-boundary
+        - managed-service
+        - verified
+        - fewest-permissions
+        - fewest-units
+
+  sources:
+    - name: application
+      type: git
+      uri: https://github.com/example/application.git
+      ref: main
+      readOnly: true
+
+    - name: company-runbooks
+      type: directory
+      path: ./runbooks
+      readOnly: true
+
+    - name: release-artifacts
+      type: object-store
+      uri: s3://example-release-artifacts/releases/
+      authRef: aws-release-reader
+      readOnly: true
+
+  capabilities:
+    requires:
+      - git.state_read
+      - container.oci_metadata
+      - runtime.manifest_validation
+      - security.key_encryption
+    optional:
+      - monitor.runtime_health
+
+  units:
+    - module: std:git
+      version: 0.9.12
+    - module: std:oci
+      version: 0.9.12
+    - module: github.com/KisteBox/kiste-unit-kubernetes
+      version: v0.2.0
+    - module: github.com/KisteBox/kiste-unit-azure-key-vault
+      version: v0.1.0
+
+  resolution:
+    mode: locked
+    onAmbiguity: fail
+    allowFallback: false
+    bindings:
+      - capability: runtime.manifest_validation
+        unit: std:kubernetes-basic
+
+  policy:
+    allowedSourceHosts:
+      - github.com
+      - gitlab.com
+      - bitbucket.org
+    allowedAdapters:
+      - native-go
+      - local-grpc
+      - wasm
+    mutation:
+      requireApprovedPlan: true
+      readOnlyStages:
+        - read
+        - inspect
+        - plan
+        - review
+    secrets:
+      valuesInManifest: forbidden
