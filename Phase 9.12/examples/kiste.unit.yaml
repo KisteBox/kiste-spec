@@ -1,0 +1,71 @@
+apiVersion: kiste.dev/v1alpha1
+kind: KisteUnit
+
+metadata:
+  name: github-basic
+  labels:
+    family: git
+
+spec:
+  module: github.com/KisteBox/kiste-unit-github
+  version: v0.1.0
+
+  adapter:
+    type: local-grpc
+    contract: kiste.hook/v1alpha1
+    entrypoint: ./bin/kiste-unit-github
+
+  tools:
+    - name: github
+      interface: api
+
+  capabilities:
+    provides:
+      - name: git.state_read
+        implementation: github-api
+        support: verified
+        traits:
+          cloudAffinity:
+            - cloud-neutral
+          identityBoundaries:
+            - external-saas
+          runtimes:
+            - any
+          externalDependencies:
+            - github-api
+          externalCloudDependency: false
+          managed: true
+          portability: high
+          operationalOverhead: low
+      - name: git.update
+        implementation: github-api
+        support: compatible
+        traits:
+          cloudAffinity:
+            - cloud-neutral
+          identityBoundaries:
+            - external-saas
+          runtimes:
+            - any
+          externalDependencies:
+            - github-api
+          externalCloudDependency: false
+          managed: true
+          portability: high
+          operationalOverhead: low
+    requires:
+      - policy.validate
+      - secret.ref
+
+  lifecycle:
+    stages:
+      - read
+      - inspect
+      - plan
+      - deploy
+      - monitor
+
+  policy:
+    mutation: workspace
+    requireApprovedPlan: true
+    secretAccess: references-only

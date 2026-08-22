@@ -1,0 +1,47 @@
+apiVersion: kiste.dev/v1alpha1
+kind: KisteLock
+
+metadata:
+  name: ai-product-platform
+
+spec:
+  workspaceDigest: sha256:1111111111111111111111111111111111111111111111111111111111111111
+  intentDigest: sha256:3333333333333333333333333333333333333333333333333333333333333333
+
+  units:
+    - module: github.com/KisteBox/kiste-unit-kubernetes
+      version: v0.2.0
+      commit: 8f3ab21
+      digest: sha256:2222222222222222222222222222222222222222222222222222222222222222
+    - module: github.com/KisteBox/kiste-unit-azure-key-vault
+      version: v0.1.0
+      commit: 9a4bc32
+      digest: sha256:4444444444444444444444444444444444444444444444444444444444444444
+
+  capabilities:
+    - name: runtime.manifest_validation
+      unit: github.com/KisteBox/kiste-unit-kubernetes
+      implementation: kubernetes-api
+      adapter: native-go
+      tool: kubernetes
+      support: verified
+      reasons:
+        - capability-compatible
+        - policy-allowed
+
+    - name: security.key_encryption
+      unit: github.com/KisteBox/kiste-unit-azure-key-vault
+      implementation: azure-key-vault
+      adapter: local-grpc
+      tool: azure-key-vault
+      support: verified
+      reasons:
+        - capability-compatible
+        - deal-breakers-passed
+        - same-cloud
+        - same-identity-boundary
+        - managed-service
+
+  generatedBy:
+    kisteVersion: 0.9.12
+    schemaVersion: kiste.dev/v1alpha1
